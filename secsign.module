@@ -1,0 +1,681 @@
+<?php
+
+// $Id: secsign.module,v 1.2 2014/12/29 12:17:22 titus Exp $
+
+
+require_once('SecSignIDApi.php');
+require_once('SecSignIDTutorial.php');
+
+/**
+ * Implements hook_help().
+ */
+function secsign_help($path, $arg)
+{
+    if ($path == "admin/help#secsign") {
+        $tutorial = new SecSignIDTutorial();
+        global $language;
+        switch ($language->language) {
+            case "de":
+                return $tutorial->getDETutorial();
+                break;
+            default:
+                return $tutorial->getENTutorial();
+                break;
+        }
+    }
+}
+
+function secsign_admin() {
+    $form = array();
+    $form['secsignid_admin_servicename'] = array(
+        '#title' => t('Servicename'),
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#default_value' => variable_get('secsignid_admin_servicename', t('SecSign ID login for Drupal')),
+        '#description' => t('The name of this web site as it shall be displayed on the users smart phone.'),
+        '#maxlength' => 35,
+        '#size' => 20,
+        '#weight' => 1,
+    );
+    $form['secsignid_admin_pretext'] = array(
+        '#title' => 'Pre-Text',
+        '#type' => 'textarea',
+        '#default_value' => variable_get('secsignid_admin_pretext', ''),
+        '#description' => t('This is the text or HTML that is displayed above the login form.'),
+        '#maxlength' => 200,
+        '#size' => 30,
+        '#weight' => 2,
+    );
+    $form['secsignid_admin_posttext'] = array(
+        '#title' => t('Post-Text'),
+        '#type' => 'textarea',
+        '#default_value' => variable_get('secsignid_admin_posttext', t("<a href='https://www.secsign.com/sign-up/' target='_blank'>New to SecSign?</a>")),
+        '#description' => t('This is the text or HTML that is displayed below the login form.'),
+        '#maxlength' => 200,
+        '#size' => 30,
+        '#weight' => 3,
+    );
+    $form['secsignid_admin_gotologin'] = array (
+        '#title' => t('Login Redirect'),
+        '#type' => 'select',
+        '#options' => secsign_get_page_tree('login'),
+        '#default_value' => variable_get('secsignid_admin_gotologin','<current>'),
+        '#description' => t('Select the page the user will be redirected to after a successful login.'),
+         '#weight' => 4,
+    );
+    $form['secsignid_admin_gotologout'] = array (
+        '#title' => t('Logout Redirect'),
+        '#type' => 'select',
+        '#options' => secsign_get_page_tree('logout'),
+        '#default_value' => variable_get('secsignid_admin_gotologout', '<front>'),
+        '#description' => t('Select the page the user will be redirected to after logout.'),
+            '#weight' => 5,
+    );
+
+    $form['secsignid_admin_name'] = array(
+        '#title' => t('Display name'),
+        '#type' => 'select',
+        '#options' => array(
+            0 => t('Drupal Name'),
+            1 => t('SecSign ID'),
+        ),
+        '#default_value' => variable_get('secsignid_admin_name', 0),
+        '#description' => t('Displays Drupal name or SecSign ID after logging in.'),
+        '#weight' => 6,
+    );
+
+    return system_settings_form($form);
+}
+
+/**
+ * Implements hook_permission().
+ */
+/*
+function secsign_permission()
+{
+    return null;
+}
+*/
+
+/**
+ * Implements hook_menu().
+ */
+function secsign_menu()
+{
+    $items = array();
+    $items['user/%user/secsign'] = array(
+        'title' => 'SecSign ID',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('secsign_create_userid_form', 1),
+        'access callback' => 'user_is_logged_in',
+        'type' => MENU_LOCAL_TASK,
+    );
+    $items['admin/config/secsign'] = array(
+        'title' => t('SecSign ID Settings'),
+        'description' => t('Allows a login using a smart phone running SecSign App.'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('secsign_admin'),
+        'access arguments' => array(1),
+        'type' => MENU_NORMAL_ITEM,
+    );
+    $items['secsign/bridge'] = array(
+        'page callback' => 'secsign_bridge',
+        'type' => MENU_CALLBACK,
+        'access arguments' => array('access content'),
+    );
+
+    return $items;
+}
+
+/**
+ * Generates the user form for assigning Secsign ID
+ */
+function secsign_create_userid_form($form, &$form_state)
+{
+    global $user;
+    $secsignid = db_query("SELECT secsignid from {secsign} WHERE drupal_user_id = :id LIMIT 1", array(":id" => $user->uid))->fetchField();
+
+    $form['secsignid'] = array(
+        '#title' => 'SescSign Id',
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#default_value' => $secsignid,
+        '#maxlength' => 20,
+        '#size' => 20,
+        '#weight' => 0,
+    );
+    $form['submit_accesspass'] = array(
+        '#type' => 'submit',
+        '#value' => t('Save'),
+        '#submit' => array('secsign_save_userid_form'),
+    );
+    return $form;
+}
+
+/**
+ * Saves the Secsign ID
+ */
+function secsign_save_userid_form($form, &$form_state)
+{
+    global $user;
+    db_merge('secsign')
+        ->key(array('drupal_user_id' => $user->uid))
+        ->fields(array(
+            'drupal_name' => $user->name,
+            'secsignid' => $form_state['values']['secsignid'],
+        ))
+        ->execute();
+    drupal_set_message(t('SecSign ID was saved successfully.'), 'status');
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function secsign_block_info()
+{
+    $blocks = array();
+
+    $blocks['secsign_login'] = array(
+        'info' => t('SecSign ID Login'),
+        'cache' => DRUPAL_NO_CACHE,
+    );
+
+    return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function secsign_block_view($name)
+{
+    if ($name == 'secsign_login') {
+        $block = array(
+            'subject' => 'SecSign ID',
+            'content' => drupal_get_form('secsign_loginblock'),
+            '#attached' => array(
+                'css' => array(
+                    drupal_get_path('module', 'secsign') . '/css/secsign.css',
+                )
+            )
+        );
+        return $block;
+    }
+}
+
+function secsign_loginblock($form, &$form_state)
+{
+    //User is logged in
+    if (user_is_logged_in() == TRUE) {
+        return secsign_form_greeting($form);
+
+    } //Show SecSign Login form
+    else {
+
+        $task = null;
+        if (isset($form_state['values']['secsigntask'])) {
+            $task = $form_state['values']['secsigntask'];
+        };
+
+        //Reloadhandling
+        if (empty($form_state['values'])) {
+            if (isset($_SESSION['secsignid_authsession'])) {
+                $authsession = unserialize($_SESSION['secsignid_authsession']);
+                return secsign_form_accesspass($form, $authsession);
+            }
+        }
+
+        //Step 1 - Show Login Form
+        if (empty($form_state['values']['secsignid'])) {
+            $pretext = variable_get('secsignid_admin_pretext', '');
+            if($pretext!='')
+                $form['pretext'] = array(
+                    '#markup' => '<p>'.$pretext.'</p>',
+                    '#weight' => 0,
+                );
+            $form['secsignid'] = array(
+                '#title' => 'SescSign Id',
+                '#type' => 'textfield',
+                '#required' => TRUE,
+                '#maxlength' => 20,
+                '#size' => 20,
+                '#weight' => 1,
+            );
+            $form['submit'] = array(
+                '#type' => 'submit',
+                '#value' => t('Log In'),
+                '#submit' => array('secsign_logincallback'),
+                '#weight' => 2,
+            );
+            $posttext = variable_get('secsignid_admin_posttext', t("<a href='https://www.secsign.com/sign-up/' target='_blank'>New to SecSign?</a>"));
+            if($posttext!='')
+                $form['posttext'] = array(
+                    '#markup' => '<p>'.$posttext.'</p>',
+                    '#weight' => 3,
+                );
+            $form['#attached']['css'] = array(
+                drupal_get_path('module', 'secsign') . '/css/secsign.css',
+            );
+            $form['#attached']['js'] = array(
+                drupal_get_path('module', 'secsign') . '/bridge/responsive.js',
+            );
+            return $form;
+        } //Step 2 - Show Accesspass
+        else {
+            global $base_url;
+            $secsignid = $form_state['values']['secsignid'];
+            $secsignid_service_name = variable_get('secsignid_admin_servicename', t('SecSign ID login for Drupal'));
+            $secsignid_service_address = $base_url;
+
+            //check if SecSign ID is associated to drupal user
+            $userinfo = db_query("SELECT * from {secsign} WHERE secsignid = :secsignid", array(":secsignid" => $secsignid))->fetchAll();
+            if(empty($userinfo)){
+                drupal_set_message(t('SecSign ID :secsignid not found.', array(':secsignid' => $secsignid)), 'error');
+                return secsign_form_login($form);
+            }
+
+            $secSignIDApi = NULL;
+            try {
+                $secSignIDApi = new SecSignIDApi();
+            } catch (Exception $e) {
+                drupal_set_message(t('SecSign ID Class not found: :error', array(':error' => $e->getMessage())), 'error');
+            }
+
+            //Check Accesspass
+            if ($task == 'getAuthSessionState') {
+                $authSession = new AuthSession();
+                $authSession->createAuthSessionFromArray(array(
+                    'secsignid' => $form_state['values']['secsignid'],
+                    'authsessionid' => $form_state['values']['secsignidauthsessionid'],
+                    'requestid' => $form_state['values']['secsignidrequestid'],
+                    'servicename' => $form_state['values']['secsignidservicename'],
+                    'serviceaddress' => $form_state['values']['secsignidserviceaddress'],
+                    'authsessionicondata' => $form_state['values']['secsignidauthsessionicondata']));
+
+                try {
+                    $authsessionStatus = $secSignIDApi->getAuthSessionState($authSession);
+                } catch (Exception $e) {
+                    drupal_set_message(t('SecSign ID: :error', array('error' => $e->getMessage())), 'warning');
+                }
+                if (AuthSession::AUTHENTICATED != $authsessionStatus) {
+                    if (AuthSession::PENDING == $authsessionStatus || AuthSession::FETCHED == $authsessionStatus) {
+                        //PENDING
+                        drupal_set_message(t('Authentication Session is still pending. Please accept the correct access pass on your smartphone.'));
+                        return secsign_form_accesspass($form, $authSession);
+                    } else {
+                        //DENIED
+                        drupal_set_message(t('ID was denied!'), 'warning');
+                        //clear session
+                        unset($_SESSION['secsignid_authsession']);
+                        return secsign_form_login($form);
+                    }
+                } else {
+                    //AUTHENTICATED
+                    global $user;
+                    $userinfo = db_query("SELECT * from {secsign} WHERE secsignid = :secsignid", array(":secsignid" => $secsignid))->fetchAll();
+                    $user = user_load($userinfo[0]->drupal_user_id);
+                    $login_array = array('name' => $userinfo[0]->drupal_name);
+                    user_login_finalize($login_array);
+                    //clear session
+                    unset($_SESSION['secsignid_authsession']);
+                    if(variable_get('secsignid_admin_gotologin','<current>')!="<current>") drupal_goto(variable_get('secsignid_admin_gotologin'));
+                    return secsign_form_greeting($form);
+                }
+            } //Show Accesspass
+            else {
+                // request auth session
+                try {
+                    $authsession = $secSignIDApi->requestAuthSession($secsignid, $secsignid_service_name, $secsignid_service_address);
+                } catch (Exception $e) {
+                    drupal_set_message(t('SecSign ID: :error', array(':error' => $e->getMessage())), 'warning');
+                }
+
+                // got auth session
+                if (isset($authsession)) {
+                    $serialized_authsession = serialize($authsession);
+                    $_SESSION['secsignid_authsession'] = $serialized_authsession;
+                    return secsign_form_accesspass($form, $authsession);
+                } else {
+                    drupal_set_message(t('Server sent empty response.'), 'warning');
+                    return secsign_form_login($form);
+                }
+            }
+        }
+    }
+}
+
+function secsign_logincallback($form, &$form_state)
+{
+    $form_state['rebuild'] = TRUE;
+}
+
+function secsign_logoutcallback($form, &$form_state)
+{
+    $secSignIDApi = NULL;
+    try {
+        $secSignIDApi = new SecSignIDApi();
+    } catch (Exception $e) {
+        drupal_set_message(t('SecSign ID Class not found: :error', array(':error' => $e->getMessage())), 'error');
+    }
+    // restore the auth session object from the HTTP POST parameters
+    $authSession = new AuthSession();
+    $authSession->createAuthSessionFromArray(array(
+        'secsignid' => $form_state['values']['secsignid'],
+        'authsessionid' => $form_state['values']['secsignidauthsessionid'],
+        'requestid' => $form_state['values']['secsignidrequestid'],
+        'servicename' => $form_state['values']['secsignidservicename'],
+        'serviceaddress' => $form_state['values']['secsignidserviceaddress'],
+        'authsessionicondata' => $form_state['values']['secsignidauthsessionicondata']));
+
+    // cancel auth session
+    try {
+        $secSignIDApi->cancelAuthSession($authSession); // just ask the server for the status. this returns immediately
+    } catch (Exception $e) {
+        drupal_set_message(t('SecSign ID: :error', array('error' => $e->getMessage())), 'warning');
+    }
+
+    //clear session
+    unset($_SESSION['secsignid_authsession']);
+
+    // call logout user and go back to start page
+    drupal_goto('user/logout');
+    if(variable_get('secsignid_admin_gotologout','<current>')!="<current>") drupal_goto(variable_get('secsignid_admin_gotologout'));
+}
+
+/**
+ * Returns the form with accesspass from authsession
+ */
+function secsign_form_accesspass($form, $authsession)
+{
+    global $base_url;
+
+    $form['secsignid_accesspass']['secsignidname'] = array(
+        '#markup' => '<p id="secsign-info">'.t('Accesspass for'). ' ' . $authsession->getSecSignID() . ':</p>'
+    );
+    $form['secsignid_accesspass']['accesspass'] = array(
+        '#markup' => '<div id="secsignid_accesspass_graphic" class="accesspass_secsignid_login" style="background:transparent url('.$base_url .'/'. drupal_get_path('module', 'secsign') . '/images/accesspass_bg.png) no-repeat scroll;">
+                        <img id="secsignid_accesspass" class="accesspass_icon_secsignid_login" src="data:image/png;base64,' . $authsession->getIconData() . '" class="passicon">
+                     </div>'
+    );
+    $form['secsignid'] = array(
+        '#type' => 'hidden',
+        '#value' => $authsession->getSecSignID()
+    );
+    $form['secsignidauthsessionid'] = array(
+        '#type' => 'hidden',
+        '#value' => $authsession->getAuthSessionID()
+    );
+    $form['secsignidrequestid'] = array(
+        '#type' => 'hidden',
+        '#value' => $authsession->getRequestID()
+    );
+    $form['secsignidservicename'] = array(
+        '#type' => 'hidden',
+        '#value' => $authsession->getRequestingServiceName()
+    );
+    $form['secsignidserviceaddress'] = array(
+        '#type' => 'hidden',
+        '#value' => $authsession->getRequestingServiceAddress()
+    );
+    $form['secsignidauthsessionicondata'] = array(
+        '#type' => 'hidden',
+        '#value' => $authsession->getIconData()
+    );
+    $form['secsignreturn'] = array(
+        '#type' => 'hidden',
+        '#value' => ''
+    );
+    $form['secsigntask'] = array(
+        '#type' => 'hidden',
+        '#value' => 'getAuthSessionState'
+    );
+    $form['secsigncancel_accesspass'] = array(
+        '#type' => 'submit',
+        '#value' => t('Cancel'),
+        '#submit' => array('secsign_logoutcallback'),
+    );
+    $form['secsignsubmit_accesspass'] = array(
+        '#type' => 'submit',
+        '#value' => t('Ok'),
+        '#submit' => array('secsign_logincallback'),
+    );
+    $form['#attached']['js'] = array(
+        drupal_get_path('module', 'secsign') . '/bridge/2.1.1.jquery.min.js',
+        drupal_get_path('module', 'secsign') . '/bridge/SecSignIDApi.js',
+        drupal_get_path('module', 'secsign') . '/bridge/responsive.js',
+    );
+    $form['#attached']['js'][] = array(
+        'data' => secsign_form_polling($authsession),
+        'type' => 'inline',
+    );
+    $form['#attached']['css'] = array(
+        drupal_get_path('module', 'secsign') . '/css/secsign.css',
+    );
+    return $form;
+}
+
+function secsign_form_polling($authsession)
+{
+    global $base_url;
+    $path = $base_url."/secsign/bridge";
+    return "
+        var timeTillAjaxSessionStateCheck = 3700;
+        var checkSessionStateTimerId = -1;
+
+        function ajaxCheckForSessionState(){
+            var secSignIDApi = new SecSignIDApi({posturl:'".$path."'});
+            secSignIDApi.getAuthSessionState(
+                '".$authsession->getSecSignID()."',
+                '".$authsession->getRequestID()."',
+                '".$authsession->getAuthSessionID()."',
+                function rMap(responseMap) {
+                    if(responseMap) {
+                    // check if response map contains error message or if authentication state could not be fetched from server.
+                    if ('errormsg' in responseMap) {
+                        return;
+                    } else if (!('authsessionstate' in responseMap)) {
+                        return;
+                    }
+                    if (responseMap['authsessionstate'] == undefined || responseMap['authsessionstate'].length < 1) {
+                        // got answer without an auth session state. this is not parsable and will throw the error UNKNOWN
+                        return;
+                }
+
+                // everything okay. authentication state can be checked...
+                var authSessionStatus = parseInt(responseMap['authsessionstate']);
+                var SESSION_STATE_NOSTATE = 0;
+                var SESSION_STATE_PENDING = 1;
+                var SESSION_STATE_EXPIRED = 2;
+                var SESSION_STATE_AUTHENTICATED = 3;
+                var SESSION_STATE_DENIED = 4;
+                var SESSION_STATE_SUSPENDED = 5;
+                var SESSION_STATE_CANCELED = 6;
+                var SESSION_STATE_FETCHED = 7;
+                var SESSION_STATE_INVALID = 8;
+
+                if ((authSessionStatus == SESSION_STATE_AUTHENTICATED) || (authSessionStatus == SESSION_STATE_DENIED) || (authSessionStatus == SESSION_STATE_EXPIRED)
+                || (authSessionStatus == SESSION_STATE_SUSPENDED) || (authSessionStatus == SESSION_STATE_INVALID) || (authSessionStatus == SESSION_STATE_CANCELED)) {
+                window.clearInterval(checkSessionStateTimerId);
+                jq_secsign(\"#edit-secsignsubmit-accesspass\").click();
+                }
+                }
+            });
+        }
+            for (var timerId = 1; timerId < 5000; timerId++) {
+                clearTimeout(timerId);
+            }
+
+            jq_secsign(document).ready(function () {
+                checkSessionStateTimerId = window.setInterval(function () {
+                ajaxCheckForSessionState();
+            }, timeTillAjaxSessionStateCheck);
+        });
+    ";
+}
+
+function secsign_form_login($form)
+{
+    $form['secsignid'] = array(
+        '#title' => 'SecSign Id',
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#maxlength' => 20,
+        '#size' => 20,
+        '#weight' => 0,
+    );
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Log In'),
+        '#submit' => array('secsign_logincallback'),
+    );
+    return $form;
+}
+
+function secsign_form_greeting($form)
+{
+    global $user;
+    $redirect = null;
+    if(variable_get('secsignid_admin_gotologout','<current>')!="<current>") $redirect=variable_get('secsignid_admin_gotologout');
+
+    if(variable_get('secsignid_admin_name', 0)==0){
+        $form['secsign']['loggedin'] = array(
+            '#markup' => t('Hello'). ' ' . l($user->name, 'user/' . $user->uid) . '!<br>' . l(t('Log out'), 'user/logout',array('query' => array('destination' => $redirect))),
+        );
+    }else{
+        //get secsignid
+        $secsignid = db_query("SELECT secsignid from {secsign} WHERE drupal_user_id = :id LIMIT 1", array(":id" => $user->uid))->fetchField();
+        $form['secsign']['loggedin'] = array(
+            '#markup' => t('Hello'). ' ' . l($secsignid, 'user/' . $user->uid) . '!<br>' . l(t('Log out'), 'user/logout',array('query' => array('destination' => $redirect))),
+        );
+    }
+    return $form;
+}
+
+/**
+ * Polling callback to return JSON encoded status.
+ */
+function secsign_bridge() {
+    $response = null;
+
+    if(isset($_REQUEST['request']) && isset($_REQUEST['apimethod']))
+    {
+        // ReqRequestAuthSession
+        // ReqGetAuthSessionState
+        // ReqReleaseAuthSession
+        // ReqCancelAuthSession
+
+        $secSignIDApi = new SecSignIDApi();
+
+        if(strcmp($_REQUEST['request'], "ReqRequestAuthSession") == 0){
+            try
+            {
+                $authsession = $secSignIDApi->requestAuthSession($_POST['secsignid'], $_POST['servicename'], $_POST['serviceaddress']);
+                //$response = $authsession->getAuthSessionAsArray();
+
+                $response = $secSignIDApi->getResponse();
+            }
+            catch(Exception $e){
+                $response = $secSignIDApi->getResponse();
+            }
+        } else if(strcmp($_REQUEST['request'], "ReqGetAuthSessionState") == 0){
+
+            try
+            {
+                $servicename = "";
+                if (isset($_POST['servicename'])) $servicename = $_POST['servicename'];
+                $serviceaddress = "";
+                if (isset($_POST['serviceaddress'])) $serviceaddress = $_POST['serviceaddress'];
+                $authsession = new AuthSession();
+                $authsession->createAuthSessionFromArray(array(
+                    'requestid' => $_POST['requestid'],
+                    'secsignid' => $_POST['secsignid'],
+                    'authsessionid' => $_POST['authsessionid'],
+                    'servicename' => $servicename,
+                    'serviceaddress' => $serviceaddress
+                ), true);
+
+                $authSessionState = $secSignIDApi->getAuthSessionState($authsession);
+                $response = $secSignIDApi->getResponse();
+            }
+            catch(Exception $e){
+                $response = $secSignIDApi->getResponse();
+            }
+
+        } else if(strcmp($_REQUEST['request'], "ReqReleaseAuthSession") == 0){
+            try
+            {
+                $authsession = new AuthSession();
+                $authsession->createAuthSessionFromArray(array(
+                    'requestid' => $_POST['requestid'],
+                    'secsignid' => $_POST['secsignid'],
+                    'authsessionid' => $_POST['authsessionid'],
+                    'servicename' => $_POST['servicename'],
+                    'serviceaddress' => $_POST['serviceaddress']
+                ), true);
+
+
+                $secSignIDApi->releaseAuthSession($authsession);
+                $response = $secSignIDApi->getResponse();
+
+            }
+            catch(Exception $e){
+                $response = $secSignIDApi->getResponse();
+            }
+
+        } else if(strcmp($_REQUEST['request'], "ReqCancelAuthSession") == 0){
+            try
+            {
+                $authsession = new AuthSession();
+                $authsession->createAuthSessionFromArray(array(
+                    'requestid' => $_POST['requestid'],
+                    'secsignid' => $_POST['secsignid'],
+                    'authsessionid' => $_POST['authsessionid'],
+                    'servicename' => $_POST['servicename'],
+                    'serviceaddress' => $_POST['serviceaddress']
+                ), true);
+
+
+                $authSessionState = $secSignIDApi->cancelAuthSession($authsession);
+                $response = $secSignIDApi->getResponse();
+            }
+            catch(Exception $e){
+                $response = $secSignIDApi->getResponse();
+            }
+
+        } else {
+            $response = "error=500;errormsg=unknown%20request;";
+        }
+    }
+
+
+
+    $send_as_ajax = isset($_REQUEST['isajax']);
+    $content_type = $send_as_ajax ? "text/xml" : "text/plain";
+
+    header("Content-Type: " . $content_type);
+    header("Content-Length: " . strlen($response));
+
+    echo $response;
+}
+
+function secsign_get_page_tree($log){
+    $tree = menu_tree_all_data('main-menu');
+    $x=recursiveFind($tree,'link_title');
+    $y=recursiveFind($tree,'link_path');
+    $content=array_combine($y, $x);
+    if($log == 'login')
+        $content['<current>']=t('Current Page');
+    return $content;
+}
+
+function recursiveFind(array $array, $needle)
+{
+    $iterator  = new RecursiveArrayIterator($array);
+    $recursive = new RecursiveIteratorIterator($iterator, RecursiveIteratorIterator::SELF_FIRST);
+    $aHitList = array();
+    foreach ($recursive as $key => $value) {
+        if ($key == $needle) {
+            array_push($aHitList, $value);
+        }
+    }
+    return $aHitList;
+}

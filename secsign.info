@@ -1,0 +1,7 @@
+name = secsign
+description = This module allows users to authenticate using smart phone running SecSign App.
+package = SecSign ID
+version = 7.34
+core = 7.x
+files[] = secsign.module
+configure = admin/config/secsign

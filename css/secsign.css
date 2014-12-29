@@ -1,0 +1,58 @@
+/**
+ * $Id: secsign.css,v 1.1 2014/12/15 13:12:45 titus Exp $
+ * $Log: secsign.css,v $
+ * Revision 1.1  2014/12/15 13:12:45  titus
+ * Initial version.
+ *
+ *
+ */
+ 
+/*!
+ * (c) 2014 SecSign Technologies Inc.
+ */
+ 
+body {
+    background-color: red!important;
+}
+
+#secsign-loginblock{
+
+}
+
+#secsign-info{
+    width: 100%;
+    font-weight: bold;
+}
+
+#edit-secsignid{
+    width: 100%;
+    padding: 5px 0;
+    margin: 0;
+}
+
+.accesspass_icon_secsignid_login{
+    display: block;
+    position: absolute;
+    margin-top: 100px;
+    margin-left: 40px;
+    width: 88px;
+    height: 88px;
+}
+
+.accesspass_secsignid_login{
+    background-size:180px 240px !important;
+    height:245px;
+}
+
+
+
+.secsignid_no_graphic{
+    background: none !important;
+}
+
+.accesspass_icon_secsignid_login_small{
+    display: block;
+    width: 100%;
+    max-width: 88px;
+    margin: 15px auto;
+}

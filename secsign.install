@@ -1,0 +1,91 @@
+<?php
+
+// $Id: secsign.install,v 1.1 2014/12/15 13:12:45 titus Exp $
+
+
+/**
+ * @file
+ * Install, update and uninstall functions for the secsign module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function secsign_schema() {
+  $schema['secsign'] = array(
+    'description' => 'Table that contains ga specific data.',
+    'fields' => array(
+      'drupal_user_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'Unique user ID.',
+      ),
+    'drupal_name' => array(
+            'type' => 'varchar',
+            'length' => 255,
+            'not null' => TRUE,
+            'description' => 'User name.',
+          ),
+    'secsignid' => array(
+            'type' => 'varchar',
+            'length' => 255,
+            'not null' => TRUE,
+            'description' => 'Unique SecSign ID.',
+          ),
+    ),
+    'primary key' => array('drupal_user_id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function secsign_install() {
+  variable_set('secsign_textname', variable_get('site_name', 'Drupal'));
+  variable_set('secsign_generation_types', 'BOTH');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function secsign_uninstall() {
+  variable_del('secsign_textname');
+  variable_del('secsign_textid');
+  variable_del('secsign_totp_skew');
+  variable_del('secsign_hotp_skew');
+  variable_del('secsign_redirect_after_save');
+  variable_del('secsign_generation_types');
+}
+
+/**
+ * Url encode user names to create valid urls.
+ */
+function secsign_update_7101() {
+  $names = db_select('secsign')
+    ->fields('secsign', array('name'))
+    ->execute()
+    ->fetchAll();
+  foreach ($names as $name) {
+    db_update('secsign')
+      ->fields(array('name' => rawurlencode($name->name)))
+      ->condition('name', $name->name)
+      ->execute();
+  }
+}
+
+/**
+ * Store the current site name as GA Login realm if the realm is not set.
+ *
+ * Needed to prevent future site name changes from invalidating existing
+ * GA accounts.
+ */
+function secsign_update_7102() {
+  // Only save the current site name if the secsign_textname variable is
+  // currently not set. If it is set to empty (''), leave it as is since
+  // changing it to site name will invalidate existing accounts.
+  if (variable_get('secsign_textname', FALSE) === FALSE) {
+    variable_set('secsign_textname', variable_get('site_name', 'Drupal'));
+  }
+}

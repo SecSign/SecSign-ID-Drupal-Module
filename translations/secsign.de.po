@@ -1,0 +1,137 @@
+# $Id: secsign.de.po,v 1.1 2014/12/29 12:15:34 titus Exp $
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: SecSign ID\n"
+"POT-Creation-Date: 2014-12-16 12:42-0500\n"
+"PO-Revision-Date: 2014-12-16 12:54-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: de\n"
+"X-Generator: Poedit 1.7.1\n"
+
+#: secsign.module:19
+msgid "Servicename"
+msgstr "Servicename"
+
+#: secsign.module:22;198
+msgid "SecSign ID login for Drupal"
+msgstr "SecSign ID Login für Drupal"
+
+#: secsign.module:56
+msgid "SecSign ID Settings"
+msgstr "SecSign ID Einstellungen"
+
+#: secsign.module:57
+msgid "Allows a login using a smart phone running SecSign App."
+msgstr "Erlaubt den Login via Smartphone und SecSign App."
+
+#: secsign.module:91
+msgid "Save"
+msgstr "Speichern"
+
+#: secsign.module:110
+msgid "SecSign ID was saved successfully."
+msgstr "SecSign ID wurde erfolgreich gespeichert."
+
+#: secsign.module:121
+msgid "SecSign ID Login"
+msgstr "SecSign ID Login"
+
+#: secsign.module:181;455
+msgid "Log In"
+msgstr "Log In"
+
+#: secsign.module:185
+msgid "New to SecSign?"
+msgstr "Mehr Informationen zu SecSign?"
+
+#: secsign.module:204
+msgid "SecSign ID :secsignid not found."
+msgstr "SecSign ID :secsignid wurde nicht gefunden."
+
+#: secsign.module:212;288
+msgid "SecSign ID Class not found: :error"
+msgstr "SecSign ID Klasse nicht gefunden: :error"
+
+#: secsign.module:229;260;304
+msgid "SecSign ID: :error"
+msgstr "SecSign ID: :error"
+
+#: secsign.module:234
+msgid "Authentication Session is still pending. Please accept the correct access pass on your smartphone."
+msgstr "Die Authentifizierung läuft noch. Bitte bestätigen Sie den korrekten Accesspass auf Ihrem Smartphone."
+
+#: secsign.module:238
+msgid "ID was denied!"
+msgstr "ID wurde abgelehnt."
+
+#: secsign.module:269
+msgid "Server sent empty response."
+msgstr "Der Server antwortet nicht."
+
+#: secsign.module:321
+msgid "Accesspass for"
+msgstr "Accesspass für"
+
+#: secsign.module:362
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: secsign.module:367
+msgid "Ok"
+msgstr "Ok"
+
+#: secsign.module:465
+msgid "Hello"
+msgstr "Hallo"
+
+#: secsign.module:465
+msgid "Log out"
+msgstr "Abmelden"
+
+#: secsign.module:49 secsign.info:0
+msgid "SecSign ID"
+msgstr "SecSign ID"
+
+#: secsign.info:0
+msgid "secsign"
+msgstr "secsign"
+
+#: secsign.info:0
+msgid "This module allows users to authenticate using smart phone running SecSign App."
+msgstr "Dieses Modul erlaubt Nutzern die Authentifizierung mittels Smartphone und SecSign App."
+
+msgid "The name of this web site as it shall be displayed on the users smart phone."
+msgstr "Der Name der Website, wie er auf dem Smartphone angezeigt werden soll."
+
+msgid "This is the text or HTML that is displayed above the login form."
+msgstr "Text oder HTML, der über dem Loginformular angezeigt wird."
+
+msgid "This is the text or HTML that is displayed below the login form."
+msgstr "Text oder HTML, der unter dem Loginformular angezeigt wird."
+
+msgid "Displays Drupal name or SecSign ID after logging in."
+msgstr "Zeigt den Drupal Namen oder die SecSign ID nach dem Login an."
+
+msgid "Display name"
+msgstr "Namen anzeigen"
+
+msgid "The configuration options have been saved."
+msgstr "Die Änderungen wurden gespeichert."
+
+msgid "<a href='https://www.secsign.com/sign-up/' target='_blank'>New to SecSign?</a>"
+msgstr "<a href='https://www.secsign.com/sign-up/' target='_blank'>Mehr Informationen zu SecSign?</a>"
+
+msgid "Current Page"
+msgstr "Aktuelle Seite"
+
+msgid "Select the page the user will be redirected to after a successful login."
+msgstr "Wählen Sie eine Seite, die nach erfolgreicher Anmeldung angezeigt werden soll."
+
+msgid "Select the page the user will be redirected to after logout."
+msgstr "Wählen Sie eine Seite, die angezeigt wird, nachdem sich der Nutzer abmeldet."
