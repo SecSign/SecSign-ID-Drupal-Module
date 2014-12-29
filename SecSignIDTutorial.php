@@ -69,7 +69,7 @@ class SecSignIDTutorial
         <li><strong>Login Redirection Page:</strong> Select the page the user will be redirected to after a successful login. Select from all the pages listed in the dropdown menu. Choosing "Default" will return to the same page.</li>
         <li><strong>Logout Redirection Page:</strong> Select the page the user will be redirected to after successfully ending their current session by logging out. Select from all the pages listed in the dropdown menu. Choosing "Default" will return to the same page.</li>
         <li><strong>Show Greeting:</strong> Show or hide the simple greeting text.</li>
-        <li><strong>Show Name/Username:</strong> Displays the Joomla name or username after login.</li>
+        <li><strong>Show Name/Username:</strong> Displays the Drupal name or username after login.</li>
     </ul>
 
 <!-- img -->
