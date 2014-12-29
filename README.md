@@ -61,11 +61,15 @@ and check out our flyer at <https://www.secsign.com/secsign_portal_flyer.pdf>.
 
 * Unzip the downloaded file and copy the folder "secsign" to Drupal_root/sites/all/modules.
 * Log into Drupal and click on "Modules". Scroll down and enable the secsign module, save your configuration.
-* To activate the login block go to "Structure > Blocks" and search for "SecSign ID Login" in the "Disabled" section.
-** Choose the section you want to display the SecSign ID login form, for example "Sidebar first".
-** Save the configuration.
 
-![SecSign Installation help](/images/install_help.jpg)
+
+![SecSign User help](/images/install_help.jpg)
+
+* To activate the login block go to "Structure > Blocks" and search for "SecSign ID Login" in the "Disabled" section.
+	* Choose the section you want to display the SecSign ID login form, for example "Sidebar first".
+	* Save the configuration.
+
+![SecSign Installation help](/images/block_help.jpg)
 
 **User Settings**
 
@@ -75,10 +79,23 @@ To use the SecSign ID two-factor authentication, you need to assign a SecSign ID
 * Click on your username, your profile page should appear.
 * Click on the “SecSign ID” tab and assign your SecSign ID to your profile to allow SecSign ID authentication.
 
+![SecSign User help](/images/user_help.jpg)
+
 **Module Configuration**
 
 The configuration page lets you manage the module behaviour for the login process.
 
 * Log into Drupal and go to "Modules > secsign > Configure".
 * You are going to find the following options:
+	* __Service name__: The name of this web site as it shall be displayed on the user’s smart phone.
+	* __Pre-text__: This is the text or HTML that is displayed above the login form.
+    * __Post-text__: This is the text or HTML that is displayed below the login form.
+    * __Login Redirection Page__: Select the page the user will be redirected to after a successful login. Select from all the pages listed in the dropdown menu. Choosing “Default” will return to the same page.
+    * __Logout Redirection Page__: Select the page the user will be redirected to after successfully ending their current session by logging out. Select from all the pages listed in the dropdown menu. Choosing “Default” will return to the same page.
+    * __Show Greeting__: Show or hide the simple greeting text.
+    * __Show Name/Username__: Displays the Drupal name or username after login.
 
+
+**Tutorial**
+
+See <https://www.secsign.com/drupal-tutorial/>.
