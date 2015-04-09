@@ -1,6 +1,6 @@
 <?php
 
-// $Id: secsign.module,v 1.2 2014/12/29 12:17:22 titus Exp $
+// $Id: secsign.module,v 1.3 2015/04/09 15:16:09 titus Exp $
 
 
 require_once('SecSignIDApi.php');
@@ -116,6 +116,7 @@ function secsign_menu()
         'page callback' => 'drupal_get_form',
         'page arguments' => array('secsign_admin'),
         'access arguments' => array(1),
+        'access callback' => true,
         'type' => MENU_NORMAL_ITEM,
     );
     $items['secsign/bridge'] = array(
@@ -132,8 +133,8 @@ function secsign_menu()
  */
 function secsign_create_userid_form($form, &$form_state)
 {
-    global $user;
-    $secsignid = db_query("SELECT secsignid from {secsign} WHERE drupal_user_id = :id LIMIT 1", array(":id" => $user->uid))->fetchField();
+    $the_user = menu_get_object('user');
+    $secsignid = db_query("SELECT secsignid from {secsign} WHERE drupal_user_id = :id LIMIT 1", array(":id" => $the_user->uid))->fetchField();
 
     $form['secsignid'] = array(
         '#title' => 'SescSign Id',
@@ -157,7 +158,7 @@ function secsign_create_userid_form($form, &$form_state)
  */
 function secsign_save_userid_form($form, &$form_state)
 {
-    global $user;
+    $user = menu_get_object('user');
     db_merge('secsign')
         ->key(array('drupal_user_id' => $user->uid))
         ->fields(array(
